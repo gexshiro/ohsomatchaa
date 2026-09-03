@@ -2,15 +2,26 @@
 const toggle=document.querySelector('.menu-toggle');
 const nav=document.querySelector('.nav-links');
 if(toggle&&nav){
-  toggle.addEventListener('click',()=>{
+  const closeNav=()=>{
+    nav.classList.remove('open');
+    toggle.setAttribute('aria-expanded','false');
+  };
+  toggle.addEventListener('click',(e)=>{
+    e.stopPropagation();
     const open=!nav.classList.contains('open');
     nav.classList.toggle('open',open);
     toggle.setAttribute('aria-expanded',open?'true':'false');
   });
-  nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{
-    nav.classList.remove('open');
-    toggle.setAttribute('aria-expanded','false');
-  }));
+  nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',closeNav));
+  document.addEventListener('click',e=>{
+    if(!nav.contains(e.target)&&!toggle.contains(e.target)) closeNav();
+  });
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape') closeNav();
+  });
+  window.addEventListener('resize',()=>{
+    if(window.innerWidth>900) closeNav();
+  },{passive:true});
 }
 
 /* LAST-GOOD SCROLL REVEAL — keep this deliberately simple. */
@@ -116,47 +127,3 @@ if(window.matchMedia('(pointer:fine)').matches){
     el.addEventListener('mouseleave',()=>{el.style.transform=''});
   });
 }
-
-
-/* =========================================================
-   ROBUST MISSING-PHOTO HELPER
-   If an image file is deleted/renamed, show the exact
-   filename instead of a broken-image icon.
-   ========================================================= */
-(function(){
-  function filenameFromImg(img){
-    const explicit=img.getAttribute('data-photo-file');
-    if(explicit) return explicit;
-    const src=img.getAttribute('src')||'';
-    return (src.split('/').pop()||'missing-image').split('?')[0];
-  }
-
-  function showMissing(img){
-    if(!img || img.dataset.missingHandled==='1') return;
-    img.dataset.missingHandled='1';
-
-    const filename=filenameFromImg(img);
-    const box=document.createElement('div');
-    box.className='missing-photo';
-    box.setAttribute('role','img');
-    box.setAttribute('aria-label',`Missing photo: ${filename}`);
-    box.innerHTML =
-      '<strong>PHOTO MISSING</strong>' +
-      `<code>${filename}</code>` +
-      '<small>This page is looking for this exact image file.</small>';
-
-    img.style.display='none';
-    img.setAttribute('aria-hidden','true');
-    if(img.parentNode) img.parentNode.insertBefore(box,img);
-  }
-
-  // Capture phase catches image errors even when another handler exists.
-  document.addEventListener('error',function(e){
-    if(e.target && e.target.tagName==='IMG') showMissing(e.target);
-  },true);
-
-  // Catch errors that already happened before the script loaded.
-  document.querySelectorAll('img').forEach(img=>{
-    if(img.complete && img.naturalWidth===0) showMissing(img);
-  });
-})();
